@@ -199,7 +199,6 @@ void flush_error_log_messages()
 void init_error_log(int log_level)
 {
   DBUG_ASSERT(!error_log_initialized);
-//  mysql_mutex_init(key_LOCK_error_log, &LOCK_error_log, MY_MUTEX_INIT_FAST);
   pthread_mutex_init(&mutex_error_log,NULL);
   error_log_initialized= true;
   log_error_level = log_level;
@@ -253,10 +252,7 @@ bool open_error_log(const char *filename)
   if (errors)
     return true;
 
-  /* The error stream must be unbuffered. */
- // setbuf(stderr, NULL);
-//  char outbuf[BUFSIZ];
-//  setbuf(stderr,outbuf);
+   setbuf(stderr,NULL);
 
   error_log_file= filename; // Remember name for later reopen
 
@@ -345,7 +341,7 @@ static void print_buffer_to_file(enum loglevel level, const char *buffer,
                                               "Warning" : "Note"),
             (int) length, buffer);
 
-    //fflush(stderr);
+    //fflush(stderr); // noneed to flush
   }
 
   if (error_log_initialized)

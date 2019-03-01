@@ -1,13 +1,9 @@
 #include <iostream>
-#include "sclog.h"
 #include <stdio.h>
 #include "vs_log.h"
 #include <iostream>
-
 using std::cout;
 using std::endl;
-
-using my_log::sclog;
 
 int main() {
 
@@ -18,11 +14,11 @@ int main() {
     cout << "open err log failed" << endl;
   }
 
-  int a=10;
   for(int i=0;i<1000000;i++)
   {
-    sql_print_error("init semisync_slave plugin error %d 你是我的",a);
+    sql_print_error("sclog 测试 %d",i);
   }
 
+  destroy_error_log();
   return 0;
 }
