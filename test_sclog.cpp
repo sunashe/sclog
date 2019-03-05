@@ -1,24 +1,33 @@
 #include <iostream>
 #include <stdio.h>
-#include "vs_log.h"
+#include "sc_log.h"
 #include <iostream>
 using std::cout;
 using std::endl;
 
-int main() {
+int main(int argc,char** argv)
+{
+    unsigned int times = atoi(argv[1]);
+    init_error_log(3);
+    char* log_file = "./test.log";
+    if(open_error_log(log_file))
+    {
+        cout << "open err log failed" << endl;
+    }
+    close_log_buffer();
 
-  init_error_log(3);
-  char* log_file = "./test.log";
-  if(open_error_log(log_file))
-  {
-    cout << "open err log failed" << endl;
-  }
+    for(int i=0;i<times;i++)
+    {
+        sql_print_information("sclog 测试 %d",i);
+    }
 
-  for(int i=0;i<1000000;i++)
-  {
-    sql_print_error("sclog 测试 %d",i);
-  }
+    destroy_error_log();
+    sql_print_error("关闭后");
+//    init_error_log(3);
+//    if(open_error_log(log_file))
+//    {
+//        cout << "open err log failed" << endl;
+//    }
 
-  destroy_error_log();
-  return 0;
+    return 0;
 }

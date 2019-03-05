@@ -7,6 +7,7 @@
 
 #include "my_global.h"
 #include <pthread.h>
+
 //#include "auth/sql_security_ctx.h"
 
 ////////////////////////////////////////////////////////////
@@ -58,7 +59,9 @@ MY_ATTRIBUTE((format(printf, 2, 0)));
   @note The error log can still be used before this function is called,
   but that should only be done single-threaded.
 */
-void init_error_log(int );
+void init_error_log(int);
+extern bool muti;
+extern bool error_log_opened;
 
 /**
   Open the error log and redirect stderr and optionally stdout
@@ -123,5 +126,8 @@ bool log_syslog_update_settings();
 
 bool log_syslog_init();
 void log_syslog_exit();
+
+void close_log_buffer();
+void open_log_buffer();
 
 #endif //MYSQL_VS_LOG_H

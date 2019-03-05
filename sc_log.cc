@@ -28,8 +28,8 @@
     Abort logging when we get an error in reading or writing log files
 */
 
-#include "vs_log.h"
-#include "mysqld_error.h"
+#include "sc_log.h"
+//#include "mysqld_error.h"
 
 
 #include "pfs_file_provider.h"
@@ -54,6 +54,7 @@ using std::max;
 /* max size of log messages (error log, plugins' logging, general log) */
 static const uint MAX_LOG_BUFFER_SIZE= 1024;
 int log_error_level;
+FILE *result;
 
 
 /* 26 for regular timestamp, plus 7 (".123456") when using micro-seconds */
@@ -166,7 +167,6 @@ static int make_iso8601_timestamp(char *buf, ulonglong utime= 0)
 
 
 
-
 ////////////////////////////////////////////////////////////
 //
 // Error Log
@@ -187,14 +187,13 @@ void flush_error_log_messages()
 {
   if (buffered_messages && !buffered_messages->empty())
   {
-    fprintf(stderr, "%s", buffered_messages->c_str());
-    fflush(stderr);
+    fprintf(result, "%s", buffered_messages->c_str());
+    fflush(result);
     delete buffered_messages;
     buffered_messages= NULL;
   }
   error_log_buffering= false;
 }
-
 
 void init_error_log(int log_level)
 {
@@ -221,7 +220,7 @@ void init_error_log(int log_level)
 
 FILE *my_freopen(const char *path, const char *mode, FILE *stream)
 {
-  FILE *result;
+
 
 #if defined(_WIN32)
   result= my_win_freopen(path, mode, stream);
@@ -232,30 +231,42 @@ FILE *my_freopen(const char *path, const char *mode, FILE *stream)
   return result;
 }
 
+void close_log_buffer()
+{
+  if(error_log_opened)
+  {
+    setbuf(result,NULL);
+  }
+}
+
+
+void open_log_buffer()
+{
+  if(error_log_opened)
+  {
+    char c[BUFSIZ];
+    setbuf(result,c);
+  }
+}
+
+bool error_log_opened = false;
 bool open_error_log(const char *filename)
 {
   DBUG_ASSERT(filename);
-  int retries= 2, errors= 0;
+  int retries= 2;
 
   do
   {
-    errors= 0;
-    if (!my_freopen(filename, "a", stderr))
-      errors++;
-#ifndef EMBEDDED_LIBRARY
-    if (!my_freopen(filename, "a", stdout))
-      errors++;
-#endif
+    result = fopen(filename,"a");
   }
-  while (retries-- && errors);
+  while (retries-- && !result);
 
-  if (errors)
+  if (!result)
+  {
     return true;
-
-   setbuf(stderr,NULL);
-
+  }
   error_log_file= filename; // Remember name for later reopen
-
+  error_log_opened = true;
   // Write any messages buffered while we were figuring out the filename
   flush_error_log_messages();
   return false;
@@ -272,7 +283,13 @@ void destroy_error_log()
   {
     error_log_initialized= false;
     error_log_file= NULL;
+    fclose(result);
     pthread_mutex_destroy(&mutex_error_log);
+  }
+
+  if(!error_log_buffering)
+  {
+      error_log_buffering= true;
   }
 }
 
@@ -313,8 +330,9 @@ static void print_buffer_to_file(enum loglevel level, const char *buffer,
     safe to write without mutex.
   */
   if(error_log_initialized)
-  { pthread_mutex_lock(&mutex_error_log);}
-
+  {
+    pthread_mutex_lock(&mutex_error_log);
+  }
 
   if (error_log_buffering)
   {
@@ -334,14 +352,12 @@ static void print_buffer_to_file(enum loglevel level, const char *buffer,
   }
   else
   {
-    fprintf(stderr, "%s %u [%s] %.*s\n",
+    fprintf(result, "%s %u [%s] %.*s\n",
             my_timestamp,
             thread_id,
             (level == ERROR_LEVEL ? "ERROR" : level == WARNING_LEVEL ?
                                               "Warning" : "Note"),
             (int) length, buffer);
-
-    //fflush(stderr); // noneed to flush
   }
 
   if (error_log_initialized)
